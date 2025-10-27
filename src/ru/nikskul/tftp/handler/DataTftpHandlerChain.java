@@ -10,7 +10,7 @@ public interface DataTftpHandlerChain extends TftpHandlerChain {
     @Override
     default boolean canHandle(TftpPacket packet) {
         return packet instanceof DataTftpPacket;
-    };
+    }
 
     @Override
     boolean handle(TftpPacket packet);

@@ -10,7 +10,7 @@ public interface AckTftpHandlerChain extends TftpHandlerChain {
     @Override
     default boolean canHandle(TftpPacket packet) {
         return packet instanceof AckTftpPacket;
-    };
+    }
 
     @Override
     boolean handle(TftpPacket packet);

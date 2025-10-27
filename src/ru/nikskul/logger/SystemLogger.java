@@ -2,10 +2,7 @@ package ru.nikskul.logger;
 
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 public final class SystemLogger {

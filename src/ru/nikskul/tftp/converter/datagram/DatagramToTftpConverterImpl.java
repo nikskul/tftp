@@ -28,7 +28,7 @@ public class DatagramToTftpConverterImpl
             ByteArrayInputStream bais = new ByteArrayInputStream(
                 packet.getData(), 0, packet.getLength()
             );
-            DataInputStream in = new DataInputStream(bais);
+            DataInputStream in = new DataInputStream(bais)
         ) {
             short op = in.readShort();
             return switch (op) {

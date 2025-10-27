@@ -11,7 +11,7 @@ public interface WrqTftpHandlerChain extends TftpHandlerChain {
     default boolean canHandle(TftpPacket packet) {
         return packet instanceof RequestTftpPacket &&
             packet.getOpcode() == 2;
-    };
+    }
 
     @Override
     boolean handle(TftpPacket packet);
