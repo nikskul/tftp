@@ -29,10 +29,15 @@ networks implementing UDP.
    disturbing the transfer.
 
 ## Todo
- - [ ] File Provider
-   - [ ] Session segregating file providing
-   - [ ] Securing file path
- - [ ] Support work with files over multiple session
-   - [ ] Session should work only with one file provided by initial request
-   - [ ] WRQ capture file for undivided access
- - [ ] 
+ - [ ] TFTP Server
+   - [ ] File Provider
+     - [x] Session segregating file providing
+     - [ ] Securing file path
+   - [x] Support work with files over multiple session
+     - [x] Session should work only with one file provided by initial request
+     - [x] WRQ capture file for exclusive access
+ - [ ] TFTP Client
+   - [ ] CLI
+     - [ ] Connect to server
+     - [ ] Send RRQ\WRQ (get\put)
+     - [ ] Choice MODE (netascii, octet)
