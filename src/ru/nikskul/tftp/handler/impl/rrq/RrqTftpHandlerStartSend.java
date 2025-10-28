@@ -5,7 +5,7 @@ import ru.nikskul.tftp.file.tftp.reader.TftpFileReader;
 import ru.nikskul.tftp.handler.RrqTftpHandlerChain;
 import ru.nikskul.tftp.packet.RequestTftpPacket;
 import ru.nikskul.tftp.packet.TftpPacket;
-import ru.nikskul.tftp.packet.impl.DataTftpPacketImpl;
+import ru.nikskul.tftp.packet.factory.TftpPacketFactory;
 import ru.nikskul.tftp.packet.impl.ErrorTftpPacketImpl;
 import ru.nikskul.tftp.send.TftpSendUseCase;
 
@@ -16,15 +16,17 @@ public class RrqTftpHandlerStartSend
 
     private final TftpFileReader fileReader;
     private final TftpSendUseCase sendUseCase;
+    private final TftpPacketFactory packetFactory;
 
     public RrqTftpHandlerStartSend(
         RrqTftpHandlerChain next,
         TftpFileReader fileReader,
-        TftpSendUseCase sendUseCase
+        TftpSendUseCase sendUseCase, TftpPacketFactory packetFactory
     ) {
         super(next);
         this.fileReader = fileReader;
         this.sendUseCase = sendUseCase;
+        this.packetFactory = packetFactory;
     }
 
     @Override
@@ -38,7 +40,7 @@ public class RrqTftpHandlerStartSend
             byte[] data = fileReader.startRead(packet.getTid(), filename, 512);
             var lastPacket = data.length < 512;
 
-            DataTftpPacketImpl dataTftpPacket = new DataTftpPacketImpl(
+            var dataTftpPacket =packetFactory.data(
                 packet.getTid(), (short) 1, data
             );
 
@@ -50,8 +52,7 @@ public class RrqTftpHandlerStartSend
             }
         } catch (IOException e) {
             SystemLogger.log(e, getClass());
-            var tftpError = new ErrorTftpPacketImpl(
-                packet.getTid(), (short) 1, "File not found.");
+            var tftpError = ErrorTftpPacketImpl.fileNotFound(packet.getTid());
             sendUseCase.sendLast(tftpError);
             return false;
         }

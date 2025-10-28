@@ -2,7 +2,9 @@ package ru.nikskul.tftp.api.session.shared;
 
 import ru.nikskul.logger.SystemLogger;
 import ru.nikskul.tftp.api.session.provider.TftpSessionProvider;
+import ru.nikskul.tftp.converter.datagram.TftpToDatagramConverter;
 import ru.nikskul.tftp.datagram.receiver.DatagramReceiver;
+import ru.nikskul.tftp.packet.impl.ErrorTftpPacketImpl;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -23,34 +25,31 @@ public class SimpleTftpSession
     private final AtomicBoolean active = new AtomicBoolean(true);
 
     private final TftpSessionProvider sessionProvider;
-    private final DatagramPacket initialPacket;
+    private final InetSocketAddress address;
     private final DatagramReceiver receiver;
+    private final TftpToDatagramConverter toDatagramConverter;
 
-    private int targetTid = -1; // TODO: if received packet not from session target TID, Error "5 Unknown transfer ID" should be sent.
-    private int sourceTid = -1;
+    private volatile int targetTid = -1;
+    private volatile int sourceTid = -1;
     private DatagramSocket socket;
 
     public SimpleTftpSession(
         TftpSessionProvider sessionProvider,
-        DatagramPacket initialPacket,
-        DatagramReceiver receiver
+        InetSocketAddress address,
+        DatagramReceiver receiver, TftpToDatagramConverter toDatagramConverter
     ) {
         this.sessionProvider = sessionProvider;
-        this.initialPacket = initialPacket;
+        this.address = address;
         this.receiver = receiver;
+        this.toDatagramConverter = toDatagramConverter;
     }
 
     @Override
-    public void run() {
-        InetSocketAddress socketAddress = new InetSocketAddress(
-            initialPacket.getAddress().getHostAddress(),
-            initialPacket.getPort()
-        );
-        try (var ignore = socket = new DatagramSocket()) {
-
+    public TftpSession start() {
+        try {
             // initial configuration
-            socket.connect(socketAddress);
-            targetTid = socket.getPort();
+            socket = new DatagramSocket();
+            targetTid = address.getPort();
             sourceTid = socket.getLocalPort();
             socket.setSoTimeout(TIMEOUT);
 
@@ -63,9 +62,19 @@ public class SimpleTftpSession
 
             // register session and apply initial packet
             sessionProvider.addSession(this);
-            receiver.receive(sourceTid, initialPacket);
 
             // start main loop
+            Thread.ofVirtual().start(this::loop);
+        } catch (SocketException e) {
+            if (active.get()) {
+                SystemLogger.log(e, getClass());
+            }
+        }
+        return this;
+    }
+
+    private void loop() {
+        try {
             DatagramPacket packet = new DatagramPacket(
                 new byte[MAX_UDP_SIZE],
                 MAX_UDP_SIZE
@@ -74,34 +83,76 @@ public class SimpleTftpSession
             while (!Thread.interrupted() && active.get()) {
                 try {
                     socket.receive(packet);
+                    validate(packet);
+                    cycle = 0;
+                    receive(packet);
                 } catch (SocketTimeoutException e) {
-                    if (RETRY_ATTEMPTS < cycle) {
-                        throw e;
-                    }
-
-                    SystemLogger.log("[%d] Retry #%d", getClass(), sourceTid, cycle);
-
-                    cycle++;
-                    receiver.receive(sourceTid, packet);
-                    continue;
+                    cycle = retry(e, cycle);
+                    receive(packet);
                 }
-                cycle = 0;
-                receiver.receive(sourceTid, packet);
-            }
-        } catch (SocketException e) {
-            if (active.get()) {
-                SystemLogger.log(e, getClass());
             }
         } catch (IOException e) {
-            SystemLogger.log(e, getClass());
+            throw new RuntimeException(e);
         } finally {
             close();
             SystemLogger.log("Session closed!", getClass());
         }
     }
 
+    private int retry(
+        SocketTimeoutException e,
+        int cycle
+    ) throws SocketTimeoutException {
+        if (RETRY_ATTEMPTS < cycle) {
+            throw e;
+        }
+
+        SystemLogger.log(
+            "[%d] Retry #%d",
+            getClass(),
+            sourceTid,
+            cycle
+        );
+
+        return ++cycle;
+    }
+
+    private void validate(DatagramPacket packet) throws IOException {
+        if (targetTid == 69) {
+            targetTid = packet.getPort();
+            SystemLogger.log(
+                "Session [s:%d -> d:%d] changed!",
+                getClass(),
+                sourceTid,
+                targetTid
+            );
+        } else if (targetTid != packet.getPort()) {
+            var datagram = toDatagramConverter.convert(
+                ErrorTftpPacketImpl.unknownTid(sourceTid)
+            );
+            sendAndClose(datagram);
+        }
+    }
+
+    @Override
+    public void receive(DatagramPacket packet) {
+        waitSessionReady();
+        receiver.receive(sourceTid, packet);
+    }
+
+    private void waitSessionReady() {
+        while (sessionProvider.getSession(() -> sourceTid) == null) {
+            Thread.onSpinWait();
+        }
+    }
+
     @Override
     public void send(DatagramPacket packet) throws IOException {
+        waitSessionReady();
+        if (packet.getAddress() == null) {
+            packet.setAddress(address.getAddress());
+            packet.setPort(targetTid);
+        }
         socket.send(packet);
     }
 
@@ -126,8 +177,4 @@ public class SimpleTftpSession
         return sourceTid;
     }
 
-    @Override
-    public int getTargetTid() {
-        return targetTid;
-    }
 }

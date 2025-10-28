@@ -4,9 +4,9 @@ import ru.nikskul.logger.SystemLogger;
 import ru.nikskul.tftp.file.tftp.writer.TftpFileWriter;
 import ru.nikskul.tftp.handler.DataTftpHandlerChain;
 import ru.nikskul.tftp.packet.DataTftpPacket;
+import ru.nikskul.tftp.packet.ErrorTftpPacket;
 import ru.nikskul.tftp.packet.TftpPacket;
-import ru.nikskul.tftp.packet.impl.AckTftpPacketImpl;
-import ru.nikskul.tftp.packet.impl.ErrorTftpPacketImpl;
+import ru.nikskul.tftp.packet.factory.TftpPacketFactory;
 import ru.nikskul.tftp.send.TftpSendUseCase;
 
 import java.io.IOException;
@@ -16,29 +16,30 @@ public class DataTftpHandlerWrite
 
     private final TftpFileWriter fileWriter;
     private final TftpSendUseCase sendUseCase;
+    private final TftpPacketFactory packetFactory;
 
     public DataTftpHandlerWrite(
         DataTftpHandlerChain next,
         TftpFileWriter fileWriter,
-        TftpSendUseCase sendUseCase
+        TftpSendUseCase sendUseCase, TftpPacketFactory packetFactory
     ) {
         super(next);
         this.fileWriter = fileWriter;
         this.sendUseCase = sendUseCase;
+        this.packetFactory = packetFactory;
     }
 
     @Override
     public boolean handle(TftpPacket packet) {
-        if (!(packet instanceof DataTftpPacket)) return false;
+        if (!(packet instanceof DataTftpPacket dataTftpPacket)) return false;
 
-        DataTftpPacket dataTftpPacket = (DataTftpPacket) packet;
         byte[] data = dataTftpPacket.getData();
         boolean lastPacket = data.length < 512;
         if (!write(packet, data)) return false;
 
-        var ack = new AckTftpPacketImpl(
+        var ack = packetFactory.ack(
             packet.getTid(),
-            (short) (dataTftpPacket.getBlock())
+            (short) dataTftpPacket.getBlock()
         );
         if (lastPacket) {
             fileWriter.unlock(packet.getTid());
@@ -64,9 +65,9 @@ public class DataTftpHandlerWrite
             return true;
         } catch (IOException e) {
             SystemLogger.log(e, getClass());
-            var tftpError = new ErrorTftpPacketImpl(
+            var tftpError = packetFactory.error(
                 packet.getTid(),
-                (short) 2, "Access violation."
+                ErrorTftpPacket.ERROR.ACCESS_VIOLATION
             );
             sendUseCase.sendLast(tftpError);
             return false;

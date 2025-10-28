@@ -4,9 +4,9 @@ import ru.nikskul.logger.SystemLogger;
 import ru.nikskul.tftp.file.tftp.reader.TftpFileReader;
 import ru.nikskul.tftp.handler.AckTftpHandlerChain;
 import ru.nikskul.tftp.packet.AckTftpPacket;
+import ru.nikskul.tftp.packet.ErrorTftpPacket;
 import ru.nikskul.tftp.packet.TftpPacket;
-import ru.nikskul.tftp.packet.impl.DataTftpPacketImpl;
-import ru.nikskul.tftp.packet.impl.ErrorTftpPacketImpl;
+import ru.nikskul.tftp.packet.factory.TftpPacketFactory;
 import ru.nikskul.tftp.send.TftpSendUseCase;
 
 import java.io.IOException;
@@ -16,15 +16,17 @@ public class AckTftpHandlerSendData
 
     private final TftpSendUseCase sendUseCase;
     private final TftpFileReader fileReader;
+    private final TftpPacketFactory packetFactory;
 
     public AckTftpHandlerSendData(
         AckTftpHandlerChain next,
         TftpSendUseCase sendUseCase,
-        TftpFileReader fileReader
+        TftpFileReader fileReader, TftpPacketFactory packetFactory
     ) {
         super(next);
         this.sendUseCase = sendUseCase;
         this.fileReader = fileReader;
+        this.packetFactory = packetFactory;
     }
 
     @Override
@@ -35,10 +37,14 @@ public class AckTftpHandlerSendData
         int length = 512;
         int offset = block * length;
         try {
-            byte[] nextBLock = fileReader.readFromFile(packet.getTid(), offset, length);
+            byte[] nextBLock = fileReader.readFromFile(
+                packet.getTid(),
+                offset,
+                length
+            );
             boolean lastPacket = nextBLock.length < 512;
 
-            DataTftpPacketImpl dataPacket = new DataTftpPacketImpl(
+            var dataPacket = packetFactory.data(
                 packet.getTid(),
                 (short) (block + 1),
                 nextBLock
@@ -55,8 +61,10 @@ public class AckTftpHandlerSendData
             }
         } catch (IOException e) {
             SystemLogger.log(e, getClass());
-            var tftpError = new ErrorTftpPacketImpl(
-                packet.getTid(), (short) 2, "Access violation.");
+            var tftpError = packetFactory.error(
+                packet.getTid(),
+                ErrorTftpPacket.ERROR.ACCESS_VIOLATION
+            );
             sendUseCase.sendLast(tftpError);
             return false;
         }

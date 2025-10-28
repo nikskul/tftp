@@ -1,7 +1,7 @@
 package ru.nikskul.tftp.api.session.provider;
 
 import ru.nikskul.tftp.api.session.shared.TftpSession;
-import ru.nikskul.tftp.packet.TftpPacket;
+import ru.nikskul.tftp.packet.TftpSessionPacket;
 
 import java.util.concurrent.ConcurrentMap;
 
@@ -15,7 +15,7 @@ public class TftpSessionProviderImpl
     }
 
     @Override
-    public TftpSession getSession(TftpPacket packet) {
+    public TftpSession getSession(TftpSessionPacket packet) {
         return sessionMap.get(packet.getTid());
     }
 

@@ -46,4 +46,15 @@ public interface ErrorTftpPacket extends TftpPacket {
     default int getOpcode() {
         return 0x05;
     }
+
+    enum ERROR {
+        NOT_DEFINED,
+        FILE_NOT_FOUND,
+        ACCESS_VIOLATION,
+        DISK_FULL,
+        ILLEGAL_TFTP_OPERATION,
+        UNKNOWN_TRANSFER_ID,
+        FILE_ALREADY_EXIST,
+        NO_SUCH_USER
+    }
 }

@@ -1,7 +1,9 @@
 package ru.nikskul.tftp.handler.impl.error;
 
+import ru.nikskul.logger.SystemLogger;
 import ru.nikskul.tftp.api.session.provider.TftpSessionProvider;
 import ru.nikskul.tftp.handler.ErrorTftpHandlerChain;
+import ru.nikskul.tftp.packet.ErrorTftpPacket;
 import ru.nikskul.tftp.packet.TftpPacket;
 
 public class ErrorTftpHandlerCloseSession
@@ -19,9 +21,10 @@ public class ErrorTftpHandlerCloseSession
 
     @Override
     public boolean handle(TftpPacket packet) {
-        if (!canHandle(packet)) return false;
+        if (!(packet instanceof ErrorTftpPacket error)) return false;
 
         sessionProvider.getSession(packet).close();
+        SystemLogger.log(error.getErrMsg(), getClass());
 
         return getNext() == null || getNext().handle(packet);
     }

@@ -3,10 +3,10 @@ package ru.nikskul.tftp.handler.impl.wrq;
 import ru.nikskul.logger.SystemLogger;
 import ru.nikskul.tftp.file.tftp.writer.TftpFileWriter;
 import ru.nikskul.tftp.handler.WrqTftpHandlerChain;
+import ru.nikskul.tftp.packet.ErrorTftpPacket;
 import ru.nikskul.tftp.packet.RequestTftpPacket;
 import ru.nikskul.tftp.packet.TftpPacket;
-import ru.nikskul.tftp.packet.impl.AckTftpPacketImpl;
-import ru.nikskul.tftp.packet.impl.ErrorTftpPacketImpl;
+import ru.nikskul.tftp.packet.factory.TftpPacketFactory;
 import ru.nikskul.tftp.send.TftpSendUseCase;
 
 import java.io.IOException;
@@ -16,15 +16,17 @@ public class WrqTftpHandlerStartWrite
 
     private final TftpFileWriter fileWriter;
     private final TftpSendUseCase sendUseCase;
+    private final TftpPacketFactory packetFactory;
 
     public WrqTftpHandlerStartWrite(
         WrqTftpHandlerChain next,
         TftpFileWriter fileWriter,
-        TftpSendUseCase sendUseCase
+        TftpSendUseCase sendUseCase, TftpPacketFactory packetFactory
     ) {
         super(next);
         this.fileWriter = fileWriter;
         this.sendUseCase = sendUseCase;
+        this.packetFactory = packetFactory;
     }
 
     @Override
@@ -37,19 +39,15 @@ public class WrqTftpHandlerStartWrite
             fileWriter.startWrite(packet.getTid(), filename);
         } catch (IOException e) {
             SystemLogger.log(e, getClass());
-            var tftpError = new ErrorTftpPacketImpl(
+            var tftpError = packetFactory.error(
                 packet.getTid(),
-                (short) 6,
-                "File already exists."
+                ErrorTftpPacket.ERROR.FILE_ALREADY_EXIST
             );
             sendUseCase.sendLast(tftpError);
             return false;
         }
 
-        AckTftpPacketImpl ackTftpPacket = new AckTftpPacketImpl(
-            packet.getTid(),
-            (short) 0
-        );
+        var ackTftpPacket = packetFactory.ack(packet.getTid(), (short) 0);
 
         sendUseCase.send(ackTftpPacket);
 

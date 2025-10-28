@@ -1,8 +1,10 @@
 package ru.nikskul;
 
+import ru.nikskul.tftp.api.client.SimpleTftpClient;
 import ru.nikskul.tftp.api.server.TftpServer;
 import ru.nikskul.tftp.api.session.factory.SimpleTftpSessionFactory;
 import ru.nikskul.tftp.api.session.provider.TftpSessionProviderImpl;
+import ru.nikskul.tftp.cli.CLI;
 import ru.nikskul.tftp.converter.datagram.DatagramToTftpConverterImpl;
 import ru.nikskul.tftp.converter.datagram.TftpToDatagramConverterImpl;
 import ru.nikskul.tftp.datagram.receiver.DatagramReceiverImpl;
@@ -14,11 +16,11 @@ import ru.nikskul.tftp.handler.impl.data.DataTftpHandlerWrite;
 import ru.nikskul.tftp.handler.impl.error.ErrorTftpHandlerCloseSession;
 import ru.nikskul.tftp.handler.impl.rrq.RrqTftpHandlerStartSend;
 import ru.nikskul.tftp.handler.impl.wrq.WrqTftpHandlerStartWrite;
+import ru.nikskul.tftp.packet.factory.TftpPacketFactoryImpl;
 import ru.nikskul.tftp.resolver.TftpPacketResolverImpl;
 import ru.nikskul.tftp.send.impl.TftpSendUseCaseImpl;
 
 import java.util.List;
-import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.StampedLock;
 
@@ -35,29 +37,36 @@ public class Main {
 
         var fileProvider = new TftpFileProviderImpl(new ConcurrentHashMap<>());
         var fileStampedLock = new StampedLock();
-        var tftpFileReader = new TftpFileReaderImpl(fileStampedLock, fileProvider);
-        var tftpFileWriter = new TftpFileWriterImpl(fileStampedLock, fileProvider);
+        var tftpFileReader = new TftpFileReaderImpl(
+            fileStampedLock,
+            fileProvider
+        );
+        var tftpFileWriter = new TftpFileWriterImpl(
+            fileStampedLock,
+            fileProvider
+        );
 
+        var packetFactory = new TftpPacketFactoryImpl();
         var error = new ErrorTftpHandlerCloseSession(null, sessionProvider);
         var rrq = new RrqTftpHandlerStartSend(
             null,
             tftpFileReader,
-            sendUseCase
+            sendUseCase, packetFactory
         );
         var wrq = new WrqTftpHandlerStartWrite(
             null,
             tftpFileWriter,
-            sendUseCase
+            sendUseCase, packetFactory
         );
         var ack = new AckTftpHandlerSendData(
             null,
             sendUseCase,
-            tftpFileReader
+            tftpFileReader, packetFactory
         );
         var data = new DataTftpHandlerWrite(
             null,
             tftpFileWriter,
-            sendUseCase
+            sendUseCase, packetFactory
         );
 
 
@@ -70,16 +79,23 @@ public class Main {
         );
         var sessionFactory = new SimpleTftpSessionFactory(
             datagramReceiver,
-            sessionProvider
+            sessionProvider,
+            tftpToDatagramConverter
         );
 
         var server = new TftpServer(sessionFactory);
         Thread.ofVirtual().name("TFTP-Server").start(server);
 
-        Scanner sc = new Scanner(System.in);
-        while (true) {
-            String input = sc.nextLine();
-            if (input.equals("exit")) break;
-        }
+
+        var client = new SimpleTftpClient(
+            sessionFactory,
+            packetFactory,
+            tftpToDatagramConverter,
+            tftpFileWriter,
+            tftpFileReader
+        );
+
+        var cli = new CLI(client, sessionProvider);
+        cli.start(args);
     }
 }

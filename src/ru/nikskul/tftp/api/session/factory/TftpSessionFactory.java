@@ -1,10 +1,10 @@
 package ru.nikskul.tftp.api.session.factory;
 
-import ru.nikskul.tftp.api.session.shared.TftpSession;
+import ru.nikskul.tftp.api.session.shared.TftpSessionStarter;
 
-import java.net.DatagramPacket;
+import java.net.InetSocketAddress;
 
 public interface TftpSessionFactory {
 
-    TftpSession newInstance(DatagramPacket packet);
+    TftpSessionStarter newInstance(InetSocketAddress address);
 }

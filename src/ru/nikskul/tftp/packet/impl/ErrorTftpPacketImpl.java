@@ -37,4 +37,40 @@ public class ErrorTftpPacketImpl
     public String getErrMsg() {
         return errMsg;
     }
+
+    public  static ErrorTftpPacketImpl fileNotFound(int tid) {
+        return new ErrorTftpPacketImpl(tid, (short) 1, "File not found.");
+    }
+
+    public static ErrorTftpPacketImpl accessViolation(int tid) {
+        return new ErrorTftpPacketImpl(tid, (short) 2, "Access violation.");
+    }
+
+    public static ErrorTftpPacketImpl diskFull(int tid) {
+        return new ErrorTftpPacketImpl(
+            tid,
+            (short) 3,
+            "Disk full or allocation exceeded."
+        );
+    }
+
+    public static ErrorTftpPacketImpl illegalOperation(int tid) {
+        return new ErrorTftpPacketImpl(
+            tid,
+            (short) 4,
+            "Illegal TFTP operation."
+        );
+    }
+
+    public static ErrorTftpPacketImpl unknownTid(int tid) {
+        return new ErrorTftpPacketImpl(tid, (short) 5, "Unknown transfer ID.");
+    }
+
+    public static ErrorTftpPacketImpl fileAlreadyExists(int tid) {
+        return new ErrorTftpPacketImpl(tid, (short) 6, "File already exists.");
+    }
+
+    public static ErrorTftpPacketImpl noSuchUser(int tid) {
+        return new ErrorTftpPacketImpl(tid, (short) 7, "No such user.");
+    }
 }

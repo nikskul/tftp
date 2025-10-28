@@ -42,8 +42,8 @@ networks implementing UDP.
         - [x] WRQ capture file for exclusive access
         - [ ] WRQ must lock only file it writes
           and not block read from other files
-- [ ] TFTP Client
-    - [ ] CLI
-        - [ ] Connect to server
-        - [ ] Send RRQ\WRQ (get\put)
-        - [ ] Choice MODE (netascii, octet)
+- [x] TFTP Client
+    - [x] CLI
+        - [x] Connect to server
+        - [x] Send RRQ\WRQ (get\put)
+        - [x] Choice MODE (netascii, octet)
