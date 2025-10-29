@@ -36,7 +36,8 @@ public class SimpleTftpSession
     public SimpleTftpSession(
         TftpSessionProvider sessionProvider,
         InetSocketAddress address,
-        DatagramReceiver receiver, TftpToDatagramConverter toDatagramConverter
+        DatagramReceiver receiver,
+        TftpToDatagramConverter toDatagramConverter
     ) {
         this.sessionProvider = sessionProvider;
         this.address = address;
@@ -83,7 +84,7 @@ public class SimpleTftpSession
             while (!Thread.interrupted() && active.get()) {
                 try {
                     socket.receive(packet);
-                    validate(packet);
+                    if(!validate(packet)) continue;
                     cycle = 0;
                     receive(packet);
                 } catch (SocketTimeoutException e) {
@@ -117,7 +118,7 @@ public class SimpleTftpSession
         return ++cycle;
     }
 
-    private void validate(DatagramPacket packet) throws IOException {
+    private boolean validate(DatagramPacket packet) throws IOException {
         if (targetTid == 69) {
             targetTid = packet.getPort();
             SystemLogger.log(
@@ -130,8 +131,10 @@ public class SimpleTftpSession
             var datagram = toDatagramConverter.convert(
                 ErrorTftpPacketImpl.unknownTid(sourceTid)
             );
-            sendAndClose(datagram);
+            send(datagram);
+            return false;
         }
+        return true;
     }
 
     @Override

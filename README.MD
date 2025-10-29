@@ -31,19 +31,42 @@ networks implementing UDP.
   should be sent to the source of the incorrect packet, while not
   disturbing the transfer.
 
-## Todo
+## Clean Architecture
 
-- [ ] TFTP Server
-    - [ ] File Provider
-        - [x] Session segregating file providing
-        - [ ] Securing file path
-    - [x] Support work with files over multiple session
-        - [x] Session should work only with one file provided by initial request
-        - [x] WRQ capture file for exclusive access
-        - [ ] WRQ must lock only file it writes
-          and not block read from other files
-- [x] TFTP Client
-    - [x] CLI
-        - [x] Connect to server
-        - [x] Send RRQ\WRQ (get\put)
-        - [x] Choice MODE (netascii, octet)
+All system overview presented in the end. 
+
+### Dependency Rule
+
+Main idea of this project architecture is "Dependency Rule".
+
+*Dependency Rule - Dependency must point into the deep.*
+
+### Architecture overview
+
+#### Domain model
+
+Architecture core of this project is TFTP packet.
+![Models UML class diagram](img/Models.png)
+
+#### Interact with files
+
+![Files UML class diagram](img/Files.png)
+
+#### API
+
+Application work as 2-in-1 Client-Server implementation.
+- Server side is simple socket that work while application alive 
+  and just delegate work over sessions.
+- Client side provide API for send initial connection TFTP packets (RRQ\WRQ).
+  And used by simple CLI interface.
+
+![API UML diagram](img/API.png)
+
+#### Use cases
+
+![Interactors UML diagram](img/Interactors.png)
+
+### Architecture
+
+![Main UML diagram](img/All.png)
+

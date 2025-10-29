@@ -4,8 +4,8 @@ import ru.nikskul.logger.SystemLogger;
 import ru.nikskul.tftp.api.session.factory.TftpSessionFactory;
 import ru.nikskul.tftp.api.session.shared.TftpSession;
 import ru.nikskul.tftp.converter.datagram.TftpToDatagramConverter;
-import ru.nikskul.tftp.file.tftp.reader.TftpFileReaderImpl;
-import ru.nikskul.tftp.file.tftp.writer.TftpFileWriterImpl;
+import ru.nikskul.tftp.file.tftp.reader.TftpFileReader;
+import ru.nikskul.tftp.file.tftp.writer.TftpFileWriter;
 import ru.nikskul.tftp.packet.TftpPacket;
 import ru.nikskul.tftp.packet.factory.TftpPacketFactory;
 
@@ -15,20 +15,25 @@ import java.net.InetSocketAddress;
 public class SimpleTftpClient
     implements TftpClient {
 
+    private enum Mode {
+        NETASCII,
+        OCTET,
+    }
+
     private Mode mode = Mode.NETASCII;
 
     private final TftpSessionFactory sessionFactory;
     private final TftpPacketFactory tftpPacketFactory;
     private final TftpToDatagramConverter toDatagramConverter;
-    private final TftpFileWriterImpl fileWriter;
-    private final TftpFileReaderImpl fileReader;
+    private final TftpFileWriter fileWriter;
+    private final TftpFileReader fileReader;
 
     public SimpleTftpClient(
         TftpSessionFactory sessionFactory,
         TftpPacketFactory tftpPacketFactory,
         TftpToDatagramConverter toDatagramConverter,
-        TftpFileWriterImpl fileWriter,
-        TftpFileReaderImpl fileReader
+        TftpFileWriter fileWriter,
+        TftpFileReader fileReader
     ) {
         this.sessionFactory = sessionFactory;
         this.tftpPacketFactory = tftpPacketFactory;
@@ -99,14 +104,10 @@ public class SimpleTftpClient
     }
 
     private void sendInitialPacket(
-        TftpPacket tftpPacketFactory,
+        TftpPacket packet,
         TftpSession session
     ) throws IOException {
-        var datagram = toDatagramConverter.convert(tftpPacketFactory);
+        var datagram = toDatagramConverter.convert(packet);
         session.send(datagram);
-    }
-
-    private enum Mode {
-        NETASCII, OCTET,
     }
 }
